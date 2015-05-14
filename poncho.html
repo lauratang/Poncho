@@ -1,0 +1,400 @@
+
+<!Doctype html>
+<html>
+<head>
+<title>Clothing Forecast</title>
+<link rel="stylesheet" href="https://s3-us-west-2.amazonaws.com/assets.poncho.is/static/v2/styles/main.css?v=20141111>
+<script src="https://s3-us-west-2.amazonaws.com/assets.poncho.is/static/v2/scripts/vendor/modernizr.js"></script>
+<meta charset=utf-8"/>
+</head>
+<body>
+
+<center><img src="http://media.tumblr.com/76c3610b628f733ebd8f52e08897ead8/tumblr_inline_mlek60LUtS1qz4rgp.png"></center>
+
+<h3><center>Clothing Forecast Prototype</center></h3>
+
+<p><center><p id = "temp0"></p> <!--Temperature, precipitation, variability info given-->
+<p><font color="white">_</font></p>
+<p id = "img"></p></center>
+
+<div id="info-block">
+<div class="container">
+<ul class="info-bars odd">
+<li class="info-bar columns eight">
+<div class="title">clothing forecast</div>
+<div class="hair-forecast">
+<p><font color="white">_</font></p>
+<center>
+<p id = "temp2"></p> <!--Extra: morning umbrella recommendation-->
+<p id = "temp1"></p> <!--Primary clothing recommendation-->
+<p id = "temp4"></p> <!--Extra: accessories-->
+<p id = "temp3"></p> <!--Extra: evening umbrella recommendation / hail warning-->
+</center>
+</div>
+</li>
+</ul>
+</div>
+</div>
+
+<script>
+(function() {
+	var httpRequest;
+	if (window.XMLHttpRequest) { // Mozilla, Safari, IE7+ ...
+		httpRequest = new XMLHttpRequest();
+	} else if (window.ActiveXObject) { // IE 6 and older
+		httpRequest = new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	httpRequest.onreadystatechange = alertContents;
+	httpRequest.open('GET', "http://poncho.is/api/v2/json/dr5rs740un13/");
+	httpRequest.send();
+
+	function alertContents() {
+		if (httpRequest.readyState === 4) {
+	      if (httpRequest.status === 200) {
+
+	        var json = JSON.parse(httpRequest.responseText);
+
+	        //DATA INPUT FROM PONCHO
+			var temp = json.data.today.apparentTemperatureMax;
+			var actualhightemp = (json.data.today.temperatureMax | 0);
+			var lowtemp = json.data.today.apparentTemperatureMin;
+			var windmph = json.data.today.windSpeed;
+			var precipIntensity = json.data.today.precipIntensityMax;
+			var precipTime = json.data.today.precipIntensityMaxTime;
+			var precipProb = json.data.today.precipProbability;
+			var precipType = json.data.today.precipType;
+			var cloudPercent = json.data.today.cloudCover;
+
+			//VARIABLES TO BE FURTHER DEFINED
+
+			var precip;
+			if (precipProb<0.1 || precipIntensity<.005) {
+				precip = "no precipitation";
+			} if (precipIntensity>=.005 && precipIntensity<.017) {
+				precip = "very light " + precipType;
+			} if (precipIntensity>=.017 && precipIntensity<.4) {
+				precip = "light " + precipType;
+			} if (precipIntensity>=.4) {
+				precip = "heavy " + precipType;
+			} if (precipType==='sleet') {
+				precip = "heavy snow";
+			} if (precipType==='hail') {
+				precip = "hail";
+			}
+
+			var variability;
+			if (temp-lowtemp>=12) {
+				variability = "high";
+			} else if (temp-lowtemp>7 && temp-lowtemp<12) {
+				variability = "medium";
+			} else variability = "low";
+
+			var wind;
+			if (windmph>=24) {
+				wind = "super windy";
+			} else if (windmph>=17.5 && windmph<24) {
+				wind = "windy";
+			} else if (windmph>=12 && windmph<17.5) {
+				wind = "breezy";
+			} else wind = "calm";
+
+			var cloudcover;
+			if (cloudPercent>0.40) {
+				cloudcover = "cloudy";
+			} else if (cloudPercent>=0 && cloudPercent<=0.40) {
+				cloudcover = "sunny";
+			}
+
+			// VARIBLES FOR DATE : CURRENTLY UNUSED
+			var today = new Date((new Date()).setHours(0,0,0,0));
+			var month = today.getMonth()+1;
+			var date = today.getDate();
+
+			// VARIABILES FOR UNIX TIMESTAMP
+			function timeConverter(UNIX_timestamp){
+				var a = new Date(UNIX_timestamp*1000);
+				var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+				var year = a.getFullYear();
+				var month = months[a.getMonth()];
+				var date = a.getDate();
+				var hour = a.getHours();
+				var min = a.getMinutes();
+				var sec = a.getSeconds();
+				var time = date + ',' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec ;
+				return hour;
+			}
+
+			var morningPrecip = ((timeConverter(precipTime)>=5) && (timeConverter(precipTime)<=11));
+			var eveningPrecip = ((timeConverter(precipTime)>=18) && (timeConverter(precipTime)<=22));
+
+			// CLOTHING BANK DEPENDING ON HIGH TEMP
+			function firstLayer(temp) {
+				if (temp>=80) return 'tank top';
+				else if (temp>=70 && temp <80) return 'tank top';
+				else if (temp>=65 && temp <70) return 'short sleeve top';
+				else if (temp>=60 && temp <65) return 'short sleeve top';
+				else if (temp>=55 && temp <60) return 'top';
+				else if (temp>=50 && temp <55) return 'top';
+				else if (temp>=40 && temp <50) return 'long sleeve top';
+				else if (temp>=30 && temp <40) return 'sweater';
+				else if (temp>=20 && temp <40) return 'cozy sweater';
+				else if (temp>=10 && temp <20) return 'cozy sweater';
+				else return 'warmest sweater you own';
+			}
+			function secondLayer(temp) {
+				if (temp>=80) return 'Long-sleeve';
+				else if (temp>=65 && temp <80) return 'Sweater or Cardigan';
+				else if (temp>=60 && temp <65) return 'Sweater or Light jacket';
+				else if (temp>=55 && temp <60) return 'Lighter Jacket';
+				else if (temp>=50 && temp <55) return 'Jacket';
+				else if (temp>=45 && temp <50) return 'Thicker Jacket';
+				else if (temp>=40 && temp <45) return 'Coat';
+				else if (temp>=30 && temp <40) return 'Winter Coat';
+				else if (temp>=20 && temp <30) return 'Winter Coat';
+				else if (temp>=10 && temp <20) return 'Heavy Winter Coat';
+				else if (temp>=0 && temp <10) return 'Heavy Winter Woat';
+				else return 'Heavy Winter Coat';
+			}
+
+			var accessories;
+			if (temp<=40) {
+				accessories = "- Hat, gloves, and scarf";
+			} if (temp>40 && temp<=50) {
+				accessories = "- Scarf";
+			}
+
+			/*  
+			*
+			* PRINTOUT BELOW
+			*
+			*/
+
+			// MAIN MESSAGE (WEATHER)
+			document.getElementById("temp0").innerHTML = 
+				"Today (" + month + "/" + date + "):";
+
+			/*
+			* IMAGES BASED ON TEMPERATURE
+			* REPLACED WHEN THERE IS HEAVY RAIN, LOTS OF WIND, OR LOTS OF SNOW
+			*/
+			if (temp>=80) {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://image.shutterstock.com/display_pic_with_logo/1058333/133675727/stock-vector-vector-illustration-of-cartoon-man-in-hot-weather-133675727.jpg'>";
+			} else if (temp>=70 && temp<80) {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://thumb1.shutterstock.com/display_pic_with_logo/1187933/179977958/stock-vector-man-in-fashion-clothes-isolated-on-light-background-vector-illustration-eps-179977958.jpg'>";
+			} else if (temp>=60 && temp<70) {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://thumb1.shutterstock.com/display_pic_with_logo/1187933/179586308/stock-vector-man-in-fashion-clothes-isolated-on-light-background-vector-illustration-eps-179586308.jpg'>";
+			} else if (temp>=50 && temp<60) {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://thumb9.shutterstock.com/display_pic_with_logo/1187933/179586302/stock-vector-man-in-fashion-clothes-isolated-on-light-background-vector-illustration-eps-179586302.jpg'>";
+			} else if (temp>=40 && temp<50) {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://image.shutterstock.com/display_pic_with_logo/483673/483673,1291310459,4/stock-vector-woman-in-cold-weather-cartoon-66426109.jpg'>";
+			} else if (temp<40) {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://thumb1.shutterstock.com/display_pic_with_logo/483673/141657550/stock-vector-retro-cartoon-eskimo-with-thought-bubble-141657550.jpg'>";
+			}
+			if (precip==='light rain') {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://image.shutterstock.com/display_pic_with_logo/483673/147717845/stock-vector-retro-cartoon-person-in-rain-coat-147717845.jpg'>";
+			}
+			if (precip==='heavy rain') {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://thumb9.shutterstock.com/display_pic_with_logo/483673/225210892/stock-vector-cartoon-girl-in-rain-coat-225210892.jpg'>";
+			}
+			if (precip==='light snow' || precip==='heavy snow') {
+				document.getElementById("img").innerHTML = 
+				"<img src='http://thumb9.shutterstock.com/display_pic_with_logo/388663/388663,1293728597,2/stock-photo-an-image-of-a-man-walking-in-a-blizzard-68006851.jpg'>";
+			}
+
+			/* SECONDARY MESSAGE (CLOTHING BY IMPORTANCE)
+			   MESSAGES LATER WILL OVERRIDE MESSAGES FURTHER
+			   IF CONDITIONS ARE MET */
+			// Messages that write  into temp1 replace the original
+			// Messages that write into temp2 add a sentence.
+
+			// LOW VARIABILITY, NO PRECIPITATION, NO WIND
+			if (temp<75 && variability==='low' && precip==='no precipitation' && wind==='calm') {
+				document.getElementById("temp1").innerHTML = "- " + secondLayer(temp);
+			} if (temp>=75 && cloudcover==='sunny' && variability==='low' && precip==='no precipitation' && wind==='calm') {
+				document.getElementById("temp1").innerHTML =
+				"Short sleeves, shorts, sandals, and shades.";
+			} if (temp>=75 && cloudcover==='cloudy' && variability==='low' && precip==='no precipitation' && wind==='calm') {
+				document.getElementById("temp1").innerHTML =
+				"Short sleeves, shorts, and sandals.";
+			} if (temp<50) {
+				document.getElementById("temp1").innerHTML = "- " + secondLayer(temp);
+				document.getElementById("temp4").innerHTML = accessories;
+			}
+
+			// VARIABILITY
+			if (variability==='high' && (temp>=70)) {
+				document.getElementById("temp1").innerHTML =
+				"- Layer with a " + secondLayer(temp);
+			}
+			if (variability==='high' && (temp>40) && (temp<70)) {
+				document.getElementById("temp1").innerHTML =
+				"- Layers under your " + secondLayer(temp);
+			}
+			if (variability==='high' && (temp<=40)) {
+				document.getElementById("temp1").innerHTML =
+				"- Layers under your " + secondLayer(temp);
+				document.getElementById("temp4").innerHTML = accessories;
+			}
+			if (variability==='medium' && (temp>40) && (temp<75)) {
+				document.getElementById("temp1").innerHTML =
+				"- Layer under your " + secondLayer(temp);
+			}
+
+			// WIND
+			if ((wind==='super windy') && (temp<75)) {
+				document.getElementById("temp1").innerHTML =
+				"- Warm jacket or windbreaker";
+				document.getElementById("temp4").innerHTML = "- Scarf";
+			}
+			if ((wind==='super windy') && (temp>=75)) {
+				document.getElementById("temp1").innerHTML =
+				"- Short sleeves, shorts and sandals. Be ready for wind!";
+				document.getElementById("temp4").innerHTML = "- Scarf";
+			}
+			if ((wind==='windy') && (temp<65)) {
+				document.getElementById("temp1").innerHTML =
+				"- Windbreaker";
+				document.getElementById("temp4").innerHTML =
+				"- Scarf";
+			}
+			if ((wind==='windy') && (temp>=65)) {
+				document.getElementById("temp1").innerHTML =
+				"- Short sleeves with sandals. Be ready for wind!";
+				document.getElementById("temp4").innerHTML = "- Scarf";
+			}
+			if (wind==='breezy' && (temp<65 && temp>40)) {
+				document.getElementById("temp1").innerHTML =
+				"- " + secondLayer(temp) + " and jeans";
+			}
+
+			// PRECIPITATION
+			//It's a grab your umbrella alert! Ella ella, eh eh.
+			if (precip==='light rain' && (morningPrecip)) {
+				document.getElementById("temp2").innerHTML =
+				"- Umbrella in the morning";
+			}
+			if (precip==='heavy rain') {
+				document.getElementById("temp2").innerHTML =
+				"- Umbrella";
+			}
+			if (precip==='very light rain') {
+				document.getElementById("temp3").innerHTML =
+				"- Umbrella";
+			}
+			if (precip==='light rain' && (!morningPrecip)) {
+				document.getElementById("temp3").innerHTML =
+				"- Umbrella";
+			}
+			if (precip==='light rain' && (eveningPrecip)) {
+				document.getElementById("temp3").innerHTML =
+				"- Umbrella after work";
+			}
+
+			//light rain
+			if (precip==='light rain' && (!eveningPrecip)) {
+				if (temp>=75) {
+				document.getElementById("temp1").innerHTML =
+				"- Short sleeves, shorts, and shoes that you don't mind getting a bit wet.";
+				}
+				if (temp>=65 && temp<75) {
+				document.getElementById("temp1").innerHTML =
+				"- " + secondLayer(temp) + " and shoes that you don't mind getting a bit wet.";
+				}
+				if (temp<65) {
+					if ((wind==='windy') || (wind==='super windy')) {
+						document.getElementById("temp1").innerHTML =
+						"- Wind-proof jacket over your " + firstLayer(temp) +
+						". Pair with water-proof shoes to keep your toes happy";
+					}
+				}
+			}
+
+			//heavy rain
+			if (precip==='heavy rain' && temp<75) {
+				document.getElementById("temp1").innerHTML =
+				"- Raincoats, rain boots and umbrellas are essential. An extra pair of socks could be a lifesaver today";
+			}
+			if (precip==='heavy rain' && temp<40) {
+				document.getElementById("temp1").innerHTML =
+				"- Water-proof winter coat, rain boots and umbrellas are essential. An extra pair of socks could be a lifesaver today.";
+			}
+			if (precip==='heavy rain' && temp<30) {
+				document.getElementById("temp1").innerHTML =
+				"- Heavy, water-proof coat, rain boots and umbrellas are essential. An extra pair of socks could be a lifesaver today.";
+			}
+
+			//light snow
+			if (precip==='light snow') {
+				document.getElementById("temp1").innerHTML =
+				"- Winter jacket";
+				document.getElementById("temp4").innerHTML =
+				"- Hat";
+				if (wind==='windy' || wind==='super windy') {
+				document.getElementById("temp1").innerHTML =
+				"- Winter jacket";
+				document.getElementById("temp4").innerHTML =
+				"- Hat and scarf";
+				}
+			}
+
+			//heavy snow
+			if (precip==='heavy snow') {
+				document.getElementById("temp1").innerHTML =
+				"- Let it snow! Thickest winter coat and sturdy boots";
+				document.getElementById("temp4").innerHTML =
+				"- Hat, gloves, and scarf";
+				if (wind==='windy' || wind==='super windy') {
+				document.getElementById("temp1").innerHTML =
+				"- Let it snow! Thickest winter coat over your " + firstLayer(temp) + ". A scarf are essential." ;
+				document.getElementById("temp4").innerHTML =
+				"- Hat, gloves, and snow boots";
+				}
+			}
+
+			// EXTREME CONDITIONS
+			if (temp<10) {
+				document.getElementById("temp1").innerHTML =
+				"Today's going to be SO cold that you might as well just wear your sleeping bag to work.";
+			}
+			if (temp>95) {
+				document.getElementById("temp1").innerHTML =
+				"Wear as little clothing as possible.";
+			}
+			if (precip==='hail') {
+				document.getElementById("temp3").innerHTML =
+				"Take cover, ice cubes are falling from the sky today.";
+			}
+			if (month==1 && day==1) {
+				document.getElementById("temp3").innerHTML =
+				"Wear a party hat, bring noisemakers, and ring in the New Year!";
+			}
+			if (month==3 && day==17) {
+				document.getElementById("temp3").innerHTML =
+				"Remember to wear green today if you don't like getting pinched.";
+			}
+			if (month==10 && day==31) {
+				document.getElementById("temp3").innerHTML =
+				"Wear a spooky costume.";
+			}
+			if (month==12 && day==25) {
+				document.getElementById("temp3").innerHTML =
+				"Don a santa hat and a holiday sweater to get into the festive spirit.";
+			}
+	      } else {
+	        alert('There was a problem with the request.');
+	      }
+	    }
+	}
+})();
+
+</script>
+</body>
+</html>
